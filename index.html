@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Euro Analyst Compass — Where should a data analyst move?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --paper:#F4F7F6; --ink:#0B2830; --petrol:#0B3C49; --teal:#15837C;
+  --amber:#E8A33D; --rose:#C24E5A; --line:#D6E0DF; --card:#FFFFFF;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font:15px/1.55 'Inter',sans-serif}
+a{color:var(--teal);text-decoration:none}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+header{background:var(--petrol);color:#EAF2F1;padding:34px 0 30px}
+header .eyebrow{font:500 12px 'IBM Plex Mono',monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--amber)}
+header h1{font:700 clamp(28px,4vw,44px)/1.1 'Space Grotesk',sans-serif;margin:8px 0 6px}
+header p{max-width:640px;color:#B9CFCC}
+header .meta{font:400 12px 'IBM Plex Mono',monospace;color:#7FA3A0;margin-top:12px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px;margin-top:22px}
+.controls{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+label.ctl{font:600 12px 'Inter';text-transform:uppercase;letter-spacing:.08em;color:#5A7370}
+select,button.range{font:500 14px 'Inter';padding:7px 12px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--ink);cursor:pointer}
+button.range.on{background:var(--petrol);color:#fff;border-color:var(--petrol)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.chip{font:500 13px 'Inter';padding:5px 11px;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer;user-select:none}
+.chip.on{background:var(--teal);border-color:var(--teal);color:#fff}
+.chip.util{background:var(--paper);color:#5A7370;border-style:dashed}
+.chartbox{position:relative;height:440px;margin-top:10px}
+h2{font:700 22px 'Space Grotesk';margin:34px 0 4px}
+.sub{color:#5A7370;font-size:13px}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+th{font:600 11px 'Inter';text-transform:uppercase;letter-spacing:.08em;color:#5A7370;text-align:left;padding:8px 10px;border-bottom:2px solid var(--line)}
+td{padding:9px 10px;border-bottom:1px solid var(--line);font-size:14px}
+td.num{font-family:'IBM Plex Mono',monospace;font-size:13px}
+tr.rowlink{cursor:pointer}
+tr.rowlink:hover{background:#EDF4F3}
+.bar{height:8px;border-radius:4px;background:linear-gradient(90deg,var(--teal),var(--amber));min-width:2px}
+.rankcell{display:flex;align-items:center;gap:10px}
+.medal{font:500 12px 'IBM Plex Mono';color:#5A7370;width:28px}
+footer{margin:50px 0 30px;color:#5A7370;font-size:12.5px}
+footer a{margin-right:14px}
+.notice{background:#FBF3E4;border:1px solid #EBD9B4;border-radius:8px;padding:10px 14px;font-size:13px;margin-top:16px;display:none}
+@media(max-width:640px){.chartbox{height:340px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="eyebrow">30 countries · 16 indicators · updated daily</div>
+    <h1>Euro Analyst Compass</h1>
+    <p>Compare European countries on economy, cost of living, income, health and the data-jobs market — and find where a data analyst's next move makes sense.</p>
+    <div class="meta" id="meta">loading…</div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="notice" id="sampleNotice">⚠ You are viewing <b>demo data</b>. Run the GitHub Action (or <code>python fetch_data.py</code>) to load real figures.</div>
+
+  <div class="panel">
+    <div class="controls">
+      <label class="ctl" for="indSel">Indicator</label>
+      <select id="indSel"></select>
+      <label class="ctl">Period</label>
+      <button class="range" data-y="3">3y</button>
+      <button class="range on" data-y="5">5y</button>
+      <button class="range" data-y="10">10y</button>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="chartbox"><canvas id="chart"></canvas></div>
+  </div>
+
+  <h2>Overall ranking</h2>
+  <div class="sub">Weighted score across all indicators (0–100). Higher-is-worse indicators (inflation, unemployment, prices, tax) are inverted so every point always means "better". Click a country for its full scorecard.</div>
+  <div class="panel" style="padding:6px 20px 14px">
+    <table id="board">
+      <thead><tr><th>#</th><th>Country</th><th style="width:45%">Score</th><th>Total</th><th>Best at</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <footer>
+    <b>Sources:</b>
+    <a href="https://ec.europa.eu/eurostat" target="_blank">Eurostat</a>
+    <a href="https://developer.adzuna.com" target="_blank">Adzuna</a>
+    <a href="https://www.ef.com/epi/" target="_blank">EF EPI</a>
+    — all data retrieved via official free APIs. Job-market data covers the 10 European markets Adzuna supports.
+  </footer>
+</div>
+
+<script>
+const PALETTE = ['#15837C','#E8A33D','#C24E5A','#3E6BA8','#7C5CBF','#4E8F3A',
+  '#B0578D','#946B2D','#2E7D9A','#8A4F42','#5B7F5B','#A05195','#665191',
+  '#D45087','#F95D6A','#FF7C43','#2F4B7C','#437C90','#849324','#BC5090'];
+let D, chart, rangeY = 5, selected = new Set(['DE','NL','ES','PL','EL']);
+
+fetch('data/data.json').then(r=>r.json()).then(d=>{ D=d; init(); });
+
+function init(){
+  document.getElementById('meta').textContent =
+    'last update ' + D.generated.replace('T',' ').slice(0,16) + ' UTC';
+  if (D.sample) document.getElementById('sampleNotice').style.display='block';
+
+  const sel = document.getElementById('indSel');
+  const timeInds = Object.keys(D.indicators).filter(k => D.series[k]);
+  timeInds.forEach(k=>{
+    const o=document.createElement('option'); o.value=k;
+    o.textContent = D.indicators[k].name; sel.appendChild(o);
+  });
+  sel.onchange = draw;
+
+  const chips = document.getElementById('chips');
+  const all=document.createElement('span'); all.className='chip util'; all.textContent='All';
+  all.onclick=()=>{ selected=new Set(Object.keys(D.countries)); syncChips(); draw(); };
+  const none=document.createElement('span'); none.className='chip util'; none.textContent='None';
+  none.onclick=()=>{ selected.clear(); syncChips(); draw(); };
+  chips.append(all,none);
+  Object.entries(D.countries).sort((a,b)=>a[1].localeCompare(b[1])).forEach(([c,name])=>{
+    const s=document.createElement('span'); s.className='chip'; s.dataset.c=c; s.textContent=name;
+    s.onclick=()=>{ selected.has(c)?selected.delete(c):selected.add(c); syncChips(); draw(); };
+    chips.appendChild(s);
+  });
+  syncChips();
+
+  document.querySelectorAll('button.range').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('button.range').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on'); rangeY=+b.dataset.y; draw();
+  });
+
+  draw(); board();
+}
+
+function syncChips(){
+  document.querySelectorAll('.chip[data-c]').forEach(s=>
+    s.classList.toggle('on', selected.has(s.dataset.c)));
+}
+
+function draw(){
+  const ind = document.getElementById('indSel').value;
+  const s = D.series[ind]||{};
+  const allYears=[...new Set(Object.values(s).flatMap(o=>Object.keys(o)))].sort();
+  const years = allYears.slice(-rangeY);
+  const datasets=[...selected].sort().map((c,i)=>({
+    label:D.countries[c],
+    data:years.map(y=> s[c] ? (s[c][y]??null) : null),
+    borderColor:PALETTE[i%PALETTE.length],
+    backgroundColor:PALETTE[i%PALETTE.length],
+    tension:.25, spanGaps:true, pointRadius:3
+  }));
+  const cfg={type:'line',
+    data:{labels:years,datasets},
+    options:{maintainAspectRatio:false,interaction:{mode:'nearest',intersect:false},
+      plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{family:'Inter'}}},
+        title:{display:true,text:D.indicators[ind].name+' ('+D.indicators[ind].unit+')',
+               font:{family:'Space Grotesk',size:15,weight:'700'},color:'#0B2830'}},
+      scales:{y:{grid:{color:'#E4ECEB'}},x:{grid:{display:false}}}}};
+  if(chart) chart.destroy();
+  chart=new Chart(document.getElementById('chart'),cfg);
+}
+
+function board(){
+  const tb=document.querySelector('#board tbody');
+  const rows=Object.entries(D.totals).sort((a,b)=>b[1]-a[1]);
+  rows.forEach(([c,total],i)=>{
+    let best=null;
+    for(const [ind,rec] of Object.entries(D.scores[c]||{}))
+      if(!best||rec.rank<best.rank) best={ind,rank:rec.rank};
+    const tr=document.createElement('tr'); tr.className='rowlink';
+    tr.onclick=()=>location.href='country.html?c='+c;
+    tr.innerHTML=`<td class="num medal">${String(i+1).padStart(2,'0')}</td>
+      <td><b>${D.countries[c]}</b></td>
+      <td><div class="bar" style="width:${total}%"></div></td>
+      <td class="num"><b>${total}</b></td>
+      <td style="font-size:12.5px;color:#5A7370">${best?D.indicators[best.ind].name+' (#'+best.rank+')':''}</td>`;
+    tb.appendChild(tr);
+  });
+}
+</script>
+</body>
+</html>

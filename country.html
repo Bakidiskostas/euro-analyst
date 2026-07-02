@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Country scorecard — Euro Analyst Compass</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--paper:#F4F7F6;--ink:#0B2830;--petrol:#0B3C49;--teal:#15837C;
+--amber:#E8A33D;--rose:#C24E5A;--line:#D6E0DF;--card:#FFF}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font:15px/1.55 'Inter',sans-serif}
+a{color:var(--teal);text-decoration:none}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+header{background:var(--petrol);color:#EAF2F1;padding:28px 0}
+header .back{font:500 13px 'Inter';color:#9FC0BC}
+header h1{font:700 clamp(28px,4vw,42px) 'Space Grotesk';margin:6px 0 2px}
+.totalscore{display:flex;align-items:baseline;gap:12px;margin-top:10px}
+.totalscore .big{font:700 46px 'Space Grotesk';color:var(--amber)}
+.totalscore .lbl{color:#B9CFCC;font-size:13px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-top:20px}
+h2{font:700 20px 'Space Grotesk';margin:30px 0 4px}
+.sub{color:#5A7370;font-size:13px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.card .name{font:600 13px 'Inter';color:#41605C}
+.card .val{font:500 24px 'IBM Plex Mono';margin:4px 0 2px}
+.card .unit{font-size:12px;color:#5A7370}
+.strip{position:relative;height:10px;background:linear-gradient(90deg,#E8D5D8,#EFE6D3,#D6E7E1);border-radius:5px;margin:12px 0 4px}
+.dot{position:absolute;top:-4px;width:18px;height:18px;border-radius:50%;background:var(--petrol);border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.25);transform:translateX(-50%)}
+.striplbl{display:flex;justify-content:space-between;font:400 10.5px 'IBM Plex Mono';color:#8AA09D}
+.rk{font:500 12px 'IBM Plex Mono';color:#5A7370;margin-top:6px}
+.rk b{color:var(--ink)}
+.score-pill{float:right;font:600 13px 'IBM Plex Mono';background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:2px 10px}
+.chartbox{position:relative;height:300px;margin-top:8px}
+footer{margin:44px 0 28px;color:#5A7370;font-size:12.5px}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <a class="back" href="index.html">← All countries</a>
+  <h1 id="cname">…</h1>
+  <div class="totalscore"><span class="big" id="total">–</span>
+    <span class="lbl">total score / 100<br><span id="overallRank"></span></span></div>
+</div></header>
+
+<div class="wrap">
+  <h2>Scorecard</h2>
+  <div class="sub">Each indicator scores 0–100 by rank among all countries with data. The dot shows this country's position: right = better (direction already adjusted, e.g. low unemployment = right).</div>
+  <div class="grid" id="cards"></div>
+
+  <h2>History</h2>
+  <div class="sub">10-year trend for the core indicators.</div>
+  <div class="panel"><div class="chartbox"><canvas id="hist"></canvas></div></div>
+
+  <footer>Data: Eurostat, Adzuna, EF EPI — via free official APIs. Job data available for Adzuna-covered markets only.</footer>
+</div>
+
+<script>
+const q=new URLSearchParams(location.search), C=q.get('c')||'DE';
+fetch('data/data.json').then(r=>r.json()).then(D=>{
+  const name=D.countries[C]||C;
+  document.title=name+' — Euro Analyst Compass';
+  document.getElementById('cname').textContent=name;
+  document.getElementById('total').textContent=D.totals[C]??'–';
+  const order=Object.entries(D.totals).sort((a,b)=>b[1]-a[1]).map(e=>e[0]);
+  const pos=order.indexOf(C);
+  if(pos>=0) document.getElementById('overallRank').textContent='rank #'+(pos+1)+' of '+order.length;
+
+  const grid=document.getElementById('cards');
+  const fmt=v=>typeof v==='number'?v.toLocaleString('en-GB',{maximumFractionDigits:2}):v;
+  Object.entries(D.indicators).forEach(([ind,meta])=>{
+    const rec=(D.scores[C]||{})[ind];
+    if(!rec) return;
+    const pct=rec.score; // 0-100, already direction-adjusted
+    const div=document.createElement('div'); div.className='card';
+    div.innerHTML=`<span class="score-pill">${rec.score}</span>
+      <div class="name">${meta.name}</div>
+      <div class="val">${fmt(rec.value)}</div><div class="unit">${meta.unit}</div>
+      <div class="strip"><div class="dot" style="left:${pct}%"></div></div>
+      <div class="striplbl"><span>worst</span><span>best</span></div>
+      <div class="rk">rank <b>#${rec.rank}</b> of ${rec.of} · weight ×${meta.weight}</div>`;
+    grid.appendChild(div);
+  });
+
+  // history chart
+  const core=['gdp_growth','inflation','unemployment','real_income_gr'];
+  const cols={gdp_growth:'#15837C',inflation:'#C24E5A',unemployment:'#E8A33D',real_income_gr:'#3E6BA8'};
+  const years=[...new Set(core.flatMap(k=>Object.keys((D.series[k]||{})[C]||{})))].sort();
+  new Chart(document.getElementById('hist'),{type:'line',
+    data:{labels:years,datasets:core.filter(k=>(D.series[k]||{})[C]).map(k=>({
+      label:D.indicators[k].name,data:years.map(y=>D.series[k][C][y]??null),
+      borderColor:cols[k],backgroundColor:cols[k],tension:.25,spanGaps:true,pointRadius:2}))},
+    options:{maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{boxWidth:12}}},
+      scales:{y:{grid:{color:'#E4ECEB'},title:{display:true,text:'%'}},x:{grid:{display:false}}}}});
+});
+</script>
+</body>
+</html>
