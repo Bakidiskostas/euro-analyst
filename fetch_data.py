@@ -138,8 +138,8 @@ def fetch_eurostat_all():
         ("price_energy", "prc_ppp_ind", {"na_item": "PLI_EU27_2020", "ppp_cat": "A010405"}),
         ("real_income_gr", "tec00113", {"unit": "CLV_PCH_PRE", "na_item": "B6G"}),
         ("life_expect", "demo_mlexpec", {"sex": "T", "age": "Y_LT1"}),
-        ("life_satisf", "ilc_pw01a", {"sex": "T", "age": "Y_GE16",
-                                      "indic_wb": "LIFESAT", "unit": "RTG"}),
+        ("life_satisf", "ilc_pw01", {"sex": "T", "age": "Y_GE16", "isced11": "TOTAL",
+                                     "indic_wb": "LIFESAT", "unit": "RTG"}),
         ("population", "tps00001", {"indic_de": "JAN"}),
     ]
     for key, dataset, params in jobs:
@@ -211,13 +211,17 @@ JOOBLE_COUNTRIES = {"EL": "Greece", "CY": "Cyprus", "PT": "Portugal",
                     "LU": "Luxembourg", "IS": "Iceland", "MT": "Malta"}
 
 def http_post_json(url, payload, retries=3):
+    import ssl
     body = json.dumps(payload).encode("utf-8")
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
     for attempt in range(retries):
         try:
             req = urllib.request.Request(url, data=body, method="POST",
                 headers={"Content-Type": "application/json",
                          "User-Agent": "euro-analyst-compass/1.0"})
-            with urllib.request.urlopen(req, timeout=60) as r:
+            with urllib.request.urlopen(req, timeout=60, context=ctx) as r:
                 return json.loads(r.read().decode("utf-8"))
         except Exception as e:
             print(f"  retry {attempt+1}/{retries} for {url[:80]}... ({e})")
