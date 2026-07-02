@@ -85,19 +85,36 @@ def http_get_json(url, retries=3):
             req = urllib.request.Request(url, headers={"User-Agent": "euro-analyst-compass/1.0"})
             with urllib.request.urlopen(req, timeout=60) as r:
                 return json.loads(r.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            if e.code in (400, 404):
+                return None  # client error - retrying won't help
+            print(f"  retry {attempt+1}/{retries} for {url[:120]}... ({e})")
+            time.sleep(3 * (attempt + 1))
         except Exception as e:
             print(f"  retry {attempt+1}/{retries} for {url[:120]}... ({e})")
             time.sleep(3 * (attempt + 1))
     return None
 
-def eurostat_series(dataset, params):
-    """Return {geo: {year: value}} for a Eurostat dataset (JSON-stat 2.0)."""
-    this_year = datetime.now().year
-    p = dict(params)
-    p["format"] = "JSON"
-    p["sinceTimePeriod"] = str(this_year - YEARS_BACK)
-    url = EUROSTAT_BASE + dataset + "?" + urllib.parse.urlencode(p, doseq=True)
-    js = http_get_json(url)
+def eurostat_series(dataset, params, optional=None):
+    """Return {geo: {year: value}} for a Eurostat dataset (JSON-stat 2.0).
+    If the query fails (e.g. a dimension code changed), retries without the
+    `optional` dimensions one at a time so a single bad code doesn't kill it."""
+    def _try(p):
+        p = dict(p)
+        p["format"] = "JSON"
+        p["sinceTimePeriod"] = str(datetime.now().year - YEARS_BACK)
+        url = EUROSTAT_BASE + dataset + "?" + urllib.parse.urlencode(p, doseq=True)
+        return http_get_json(url)
+
+    js = _try(params)
+    # progressive fallback: drop optional params if the full query failed
+    if (not js or "value" not in js) and optional:
+        for drop in optional:
+            trimmed = {k: v for k, v in params.items() if k != drop}
+            js = _try(trimmed)
+            if js and "value" in js:
+                print(f"  (recovered {dataset} by dropping '{drop}')")
+                break
     if not js or "value" not in js:
         print(f"  !! Eurostat fetch failed for {dataset}")
         return {}
@@ -105,7 +122,6 @@ def eurostat_series(dataset, params):
     sizes = js["size"]
     geo_idx = {v: k for k, v in js["dimension"]["geo"]["category"]["index"].items()}
     time_idx = {v: k for k, v in js["dimension"]["time"]["category"]["index"].items()}
-    # strides for flattened index
     strides, s = {}, 1
     for d in reversed(dims):
         strides[d] = s
@@ -125,26 +141,29 @@ def eurostat_series(dataset, params):
 def fetch_eurostat_all():
     """Fetch all Eurostat-based indicators. Returns {indicator: {geo: {year: value}}}."""
     result = {}
+    # (key, dataset, params, optional_dims_to_drop_on_failure)
     jobs = [
-        ("gdp_growth", "tec00115", {"unit": "CLV_PCH_PRE", "na_item": "B1GQ"}),
-        ("inflation", "prc_hicp_aind", {"unit": "RCH_A_AVG", "coicop": "CP00"}),
-        ("unemployment", "une_rt_a", {"unit": "PC_ACT", "sex": "T", "age": "Y15-74"}),
+        ("gdp_growth", "tec00115", {"unit": "CLV_PCH_PRE", "na_item": "B1GQ"}, []),
+        ("inflation", "prc_hicp_aind", {"unit": "RCH_A_AVG", "coicop": "CP00"}, []),
+        ("unemployment", "une_rt_a", {"unit": "PC_ACT", "sex": "T", "age": "Y15-74"}, []),
         ("net_salary", "earn_nt_net", {"currency": "EUR", "estruct": "NET",
-                                       "ecase": "P1_NCH_AW100"}),
+                                       "ecase": "P1_NCH_AW100"}, []),
         ("gross_salary", "earn_nt_net", {"currency": "EUR", "estruct": "GRS",
-                                         "ecase": "P1_NCH_AW100"}),
-        ("price_level", "prc_ppp_ind", {"na_item": "PLI_EU27_2020", "ppp_cat": "E011"}),
-        ("price_food", "prc_ppp_ind", {"na_item": "PLI_EU27_2020", "ppp_cat": "A010101"}),
-        ("price_energy", "prc_ppp_ind", {"na_item": "PLI_EU27_2020", "ppp_cat": "A010405"}),
-        ("real_income_gr", "tec00113", {"unit": "CLV_PCH_PRE", "na_item": "B6G"}),
-        ("life_expect", "demo_mlexpec", {"sex": "T", "age": "Y_LT1"}),
-        ("life_satisf", "ilc_pw01", {"sex": "T", "age": "Y_GE16", "isced11": "TOTAL",
-                                     "indic_wb": "LIFESAT", "unit": "RTG"}),
-        ("population", "tps00001", {"indic_de": "JAN"}),
+                                         "ecase": "P1_NCH_AW100"}, []),
+        ("price_level", "prc_ppp_ind", {"na_item": "PLI_EU27_2020", "ppp_cat": "E011"}, []),
+        ("price_food", "prc_ppp_ind", {"na_item": "PLI_EU27_2020", "ppp_cat": "A010101"}, []),
+        ("price_energy", "prc_ppp_ind", {"na_item": "PLI_EU27_2020", "ppp_cat": "A010405"}, []),
+        ("real_income_gr", "tec00113", {"unit": "CLV_PCH_PRE", "na_item": "B6G"}, []),
+        ("life_expect", "demo_mlexpec", {"sex": "T", "age": "Y_LT1"}, []),
+        ("life_satisf", "ilc_pw01", {"indic_wb": "LIFESAT", "sex": "T",
+                                     "isced11": "TOTAL", "age": "Y_GE16",
+                                     "unit": "RTG", "freq": "A"},
+                                    ["freq", "unit", "isced11", "indic_wb"]),
+        ("population", "tps00001", {"indic_de": "JAN"}, []),
     ]
-    for key, dataset, params in jobs:
+    for key, dataset, params, optional in jobs:
         print(f"Fetching {key} ({dataset})...")
-        result[key] = eurostat_series(dataset, params)
+        result[key] = eurostat_series(dataset, params, optional)
         time.sleep(1)
 
     # Fallbacks for PPP categories if codes yield nothing (codes occasionally change):
@@ -234,7 +253,7 @@ def fetch_jooble(population, skip_geos):
         print("Jooble key not set - skipping Jooble job data.")
         return {}
     out = {}
-    url = f"https://api.jooble.org/api/{key}"
+    url = f"https://jooble.org/api/{key}"
     kw = "data analyst"
     for geo, country_name in JOOBLE_COUNTRIES.items():
         if geo in skip_geos:
