@@ -1,31 +1,39 @@
 # Euro Analyst Compass
 
-Static dashboard που συγκρίνει 30 ευρωπαϊκές χώρες σε 16 δείκτες (οικονομία, κόστος ζωής, εισόδημα, υγεία, αγορά εργασίας για data analysts). Τα δεδομένα ανανεώνονται καθημερινά μέσω GitHub Actions και η σελίδα φιλοξενείται δωρεάν στο GitHub Pages.
+A static dashboard comparing 30 European countries across 16 indicators: economy, cost of living, income, health, quality of life and the data analyst job market. Data is refreshed automatically via GitHub Actions and hosted for free on GitHub Pages.
 
-## Πηγές (όλες δωρεάν & νόμιμες, επίσημα APIs)
-- **Eurostat** — GDP growth, πληθωρισμός, ανεργία, καθαροί μισθοί, price level indices (σύνολο/τρόφιμα/ενέργεια), πραγματικό εισόδημα, προσδόκιμο ζωής, ικανοποίηση ζωής, πληθυσμός, φορολογική επιβάρυνση (gross vs net).
-- **Adzuna API** — αγγελίες data analyst/engineer/scientist, μέσος μισθός αγγελιών, ποσοστό remote (10 ευρωπαϊκές αγορές: DE, AT, CH, NL, BE, FR, ES, IT, PL, SE). Το Indeed απαγορεύει scraping, γι' αυτό δεν χρησιμοποιείται.
-- **Jooble API** — αγγελίες & ποσοστό remote για τις υπόλοιπες χώρες, **μαζί με Ελλάδα και Κύπρο** (δωρεάν κλειδί από jooble.org/api/about). Δεν δίνει αξιόπιστο μέσο μισθό, οπότε το salary card εμφανίζεται μόνο στις χώρες Adzuna. Σημ.: το EURES απαγορεύει εξαγωγή δεδομένων εκτός επίσημων partners, γι' αυτό δεν χρησιμοποιείται.
-- **EF EPI** — γνώση αγγλικών (στατικές τιμές, ενημέρωση 1×/χρόνο στο `fetch_data.py`).
+## Data sources (all free & legal — official APIs only)
 
-## Στήσιμο (μία φορά)
-1. Φτιάξε νέο **public** repo στο GitHub και ανέβασε όλα τα αρχεία (κράτα τη δομή φακέλων, μαζί με το `.github/workflows/`).
-2. **Settings → Pages** → Source: *Deploy from a branch* → Branch: `main` / root. Η σελίδα θα βγει στο `https://USERNAME.github.io/REPO/`.
-3. (Για job data) Στο repo → **Settings → Secrets and variables → Actions** πρόσθεσε:
-   - `ADZUNA_APP_ID` και `ADZUNA_APP_KEY` — δωρεάν από https://developer.adzuna.com (10 μεγάλες αγορές, με μισθούς)
-   - `JOOBLE_API_KEY` — δωρεάν από https://jooble.org/api/about (υπόλοιπες χώρες, **μαζί με Ελλάδα & Κύπρο**)
-4. **Actions tab** → workflow *Update data daily* → **Run workflow** για την πρώτη φόρτωση αληθινών δεδομένων. Μετά τρέχει μόνο του κάθε μέρα στις 05:20 UTC.
+- **Eurostat** — GDP growth, inflation (HICP), unemployment, net salaries, price level indices (overall / food / energy & housing), real household income growth, life expectancy, life satisfaction, population, tax wedge (gross vs net salary).
+- **Adzuna API** — data analyst / engineer / scientist job ads, average advertised salary, remote share. Covers 10 markets: DE, AT, CH, NL, BE, FR, ES, IT, PL, SE. Free key at https://developer.adzuna.com
+- **Jooble API** — job ads & remote share for the remaining countries, **including Greece and Cyprus**. Free key at https://jooble.org/api/about. Salary data not available via Jooble, so the salary card is shown only for Adzuna-covered markets.
+- **EF EPI** — English proficiency scores (static values, updated once a year in `fetch_data.py`).
 
-## Τοπική δοκιμή
+> Indeed is not used (scraping prohibited). EURES is not used (API restricted to official partners only).
+
+## Setup (one time)
+
+1. Create a new **public** GitHub repository and upload all files, keeping the folder structure (including `.github/workflows/`).
+2. **Settings → Pages** → Source: *Deploy from a branch* → Branch: `main` / root. Your site will be live at `https://USERNAME.github.io/REPO/`.
+3. Add your API keys as repository secrets: **Settings → Secrets and variables → Actions → New repository secret**:
+   - `ADZUNA_APP_ID` and `ADZUNA_APP_KEY` (from developer.adzuna.com)
+   - `JOOBLE_API_KEY` (from jooble.org/api/about)
+4. Go to the **Actions** tab → select *Update data* workflow → click **Run workflow**. This loads real data for the first time. After that it runs automatically on the 1st and 15th of every month at 05:20 UTC.
+
+## Local testing (no internet required)
+
 ```bash
-python fetch_data.py --sample   # demo δεδομένα χωρίς internet
-python -m http.server           # άνοιξε http://localhost:8000
+python fetch_data.py --sample   # generates realistic demo data offline
+python -m http.server           # open http://localhost:8000
 ```
-Δεν χρειάζονται εξωτερικές βιβλιοθήκες (μόνο standard library).
 
-## Πώς δουλεύει το σκορ
-Για κάθε δείκτη οι χώρες κατατάσσονται και παίρνουν 0–100 βάσει θέσης. Σε δείκτες όπου το χαμηλό είναι καλό (πληθωρισμός, ανεργία, τιμές, φόροι) η κατάταξη αντιστρέφεται, ώστε το 100 να σημαίνει πάντα "καλύτερο". Το συνολικό σκορ είναι σταθμισμένος μέσος όρος — τα βάρη αλλάζουν στο `INDICATORS` του `fetch_data.py`.
+No external libraries needed — standard library only.
 
-## Σημειώσεις
-- Αν ένα Eurostat dataset αποτύχει προσωρινά, το script κρατά τα προηγούμενα δεδομένα (δεν "σπάει" η σελίδα).
-- Οι κωδικοί κατηγοριών PPP (`ppp_cat`) της Eurostat αλλάζουν σπάνια· αν κάποιος δείκτης τιμών βγει κενός, δες τα διαθέσιμα codes στο dataset `prc_ppp_ind` στον Eurostat Data Browser.
+## How scoring works
+
+Each indicator is ranked across all countries and converted to a 0–100 score based on rank position. For indicators where lower is better (inflation, unemployment, price levels, tax wedge) the ranking is inverted, so 100 always means "best". The overall country score is a weighted average — weights can be adjusted in the `INDICATORS` dictionary in `fetch_data.py`.
+
+## Notes
+
+- If a Eurostat dataset fails temporarily, the script keeps the previous values so the site never breaks.
+- Eurostat PPP category codes (`ppp_cat`) rarely change. If a price-level indicator comes back empty, check the available codes for dataset `prc_ppp_ind` in the Eurostat Data Browser.
