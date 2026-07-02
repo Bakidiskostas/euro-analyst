@@ -127,7 +127,7 @@ def fetch_eurostat_all():
     result = {}
     jobs = [
         ("gdp_growth", "tec00115", {"unit": "CLV_PCH_PRE", "na_item": "B1GQ"}),
-        ("inflation", "tec00118", {"unit": "RCH_A_AVG", "coicop": "CP00"}),
+        ("inflation", "prc_hicp_aind", {"unit": "RCH_A_AVG", "coicop": "CP00"}),
         ("unemployment", "une_rt_a", {"unit": "PC_ACT", "sex": "T", "age": "Y15-74"}),
         ("net_salary", "earn_nt_net", {"currency": "EUR", "estruct": "NET",
                                        "ecase": "P1_NCH_AW100"}),
@@ -136,10 +136,10 @@ def fetch_eurostat_all():
         ("price_level", "prc_ppp_ind", {"na_item": "PLI_EU27_2020", "ppp_cat": "E011"}),
         ("price_food", "prc_ppp_ind", {"na_item": "PLI_EU27_2020", "ppp_cat": "A010101"}),
         ("price_energy", "prc_ppp_ind", {"na_item": "PLI_EU27_2020", "ppp_cat": "A010405"}),
-        ("real_income_gr", "sdg_10_20", {"unit": "PCH_PRE", "na_item": "B6G_R_HAB"}),
-        ("life_expect", "tps00205", {"sex": "T", "indic_de": "LE_0"}),
-        ("life_satisf", "ilc_pw01", {"isced11": "TOTAL", "sex": "T", "age": "Y_GE16",
-                                     "indic_wb": "LIFESAT", "unit": "RTG"}),
+        ("real_income_gr", "tec00113", {"unit": "CLV_PCH_PRE", "na_item": "B6G"}),
+        ("life_expect", "demo_mlexpec", {"sex": "T", "age": "Y_LT1"}),
+        ("life_satisf", "ilc_pw01a", {"sex": "T", "age": "Y_GE16",
+                                      "indic_wb": "LIFESAT", "unit": "RTG"}),
         ("population", "tps00001", {"indic_de": "JAN"}),
     ]
     for key, dataset, params in jobs:
@@ -164,7 +164,7 @@ def fetch_eurostat_all():
 
 # Adzuna country endpoints (Adzuna covers these European markets)
 ADZUNA_COUNTRIES = {"AT": "at", "BE": "be", "CH": "ch", "DE": "de", "ES": "es",
-                    "FR": "fr", "IT": "it", "NL": "nl", "PL": "pl", "SE": "se"}
+                    "FR": "fr", "IT": "it", "NL": "nl", "PL": "pl"}
 
 def fetch_adzuna(population):
     app_id = os.environ.get("ADZUNA_APP_ID")
@@ -199,13 +199,16 @@ def fetch_adzuna(population):
     return out
 
 # ---------------------------------------------------------------------------
-# Jooble (official free API, https://jooble.org/api/about) - covers countries
-# Adzuna doesn't, incl. Greece (gr) and Cyprus (cy). Set env JOOBLE_API_KEY.
+# Jooble (official free API, https://jooble.org/api/about)
+# Uses a single endpoint api.jooble.org with location filter per country.
 # ---------------------------------------------------------------------------
-JOOBLE_COUNTRIES = {"EL": "gr", "CY": "cy", "PT": "pt", "IE": "ie", "DK": "dk",
-                    "FI": "fi", "NO": "no", "CZ": "cz", "HU": "hu", "RO": "ro",
-                    "BG": "bg", "HR": "hr", "SK": "sk", "SI": "si", "EE": "ee",
-                    "LV": "lv", "LT": "lt", "LU": "lu", "IS": "is", "MT": "mt"}
+JOOBLE_COUNTRIES = {"EL": "Greece", "CY": "Cyprus", "PT": "Portugal",
+                    "IE": "Ireland", "DK": "Denmark", "FI": "Finland",
+                    "NO": "Norway", "SE": "Sweden", "CZ": "Czech Republic",
+                    "HU": "Hungary", "RO": "Romania", "BG": "Bulgaria",
+                    "HR": "Croatia", "SK": "Slovakia", "SI": "Slovenia",
+                    "EE": "Estonia", "LV": "Latvia", "LT": "Lithuania",
+                    "LU": "Luxembourg", "IS": "Iceland", "MT": "Malta"}
 
 def http_post_json(url, payload, retries=3):
     body = json.dumps(payload).encode("utf-8")
@@ -227,14 +230,14 @@ def fetch_jooble(population, skip_geos):
         print("Jooble key not set - skipping Jooble job data.")
         return {}
     out = {}
+    url = f"https://api.jooble.org/api/{key}"
     kw = "data analyst"
-    for geo, cc in JOOBLE_COUNTRIES.items():
+    for geo, country_name in JOOBLE_COUNTRIES.items():
         if geo in skip_geos:
             continue
-        url = f"https://{cc}.jooble.org/api/{key}"
-        js = http_post_json(url, {"keywords": kw, "page": 1})
+        js = http_post_json(url, {"keywords": kw, "location": country_name, "page": 1})
         time.sleep(1)
-        js_rem = http_post_json(url, {"keywords": kw + " remote", "page": 1})
+        js_rem = http_post_json(url, {"keywords": kw + " remote", "location": country_name, "page": 1})
         time.sleep(1)
         if not js:
             continue
