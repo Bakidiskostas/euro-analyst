@@ -14,7 +14,9 @@
 body{background:var(--paper);color:var(--ink);font:15px/1.55 'Inter',sans-serif}
 a{color:var(--teal);text-decoration:none}
 .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
-header{background:var(--petrol);color:#EAF2F1;padding:28px 0}
+.banner{display:block;width:100%;height:auto}
+.bannerlink{display:block;line-height:0;background:#0B1418}
+header{background:var(--petrol);color:#EAF2F1;padding:24px 0}
 header .back{font:500 13px 'Inter';color:#9FC0BC}
 header h1{font:700 clamp(28px,4vw,42px) 'Space Grotesk';margin:6px 0 2px}
 .totalscore{display:flex;align-items:baseline;gap:12px;margin-top:10px}
@@ -40,6 +42,7 @@ footer{margin:44px 0 28px;color:#5A7370;font-size:12.5px}
 </style>
 </head>
 <body>
+<a href="index.html" class="bannerlink"><img src="assets/banner.png" class="banner" alt="Euro Analyst Compass"></a>
 <header><div class="wrap">
   <a class="back" href="index.html">← All countries</a>
   <h1 id="cname">…</h1>
