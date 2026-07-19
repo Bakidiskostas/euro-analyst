@@ -39,14 +39,16 @@ COUNTRIES = {
     "NO": "Norway", "CH": "Switzerland", "IS": "Iceland",
 }
 
-# EF English Proficiency Index 2024 scores (static; no free API exists).
-# Source: EF EPI 2024 public rankings. Update once a year.
+# EF English Proficiency Index 2025 scores (static; no free API exists).
+# Source: EF EPI 2025 official report (data from 2024 test takers).
+# Cyprus 2025: 537 (dropped 21pts, now moderate proficiency).
+# Update once a year when EF releases the new report (usually November).
 ENGLISH_PROFICIENCY = {
     "NL": 636, "NO": 610, "SE": 608, "HR": 607, "PT": 605, "DK": 603,
-    "EL": 602, "AT": 600, "DE": 598, "BE": 594, "RO": 589, "FI": 583,
-    "PL": 580, "BG": 574, "HU": 573, "SK": 567, "EE": 566, "LU": 562,
-    "LT": 561, "CZ": 560, "LV": 556, "CH": 551, "SI": 619, "IS": 590,
-    "ES": 538, "IT": 534, "FR": 531, "CY": 540, "MT": 620, "IE": 700,
+    "EL": 602, "AT": 600, "DE": 598, "BE": 592, "FI": 590, "RO": 593,
+    "PL": 588, "BG": 586, "HU": 585, "SK": 584, "EE": 578, "LU": 576,
+    "LT": 569, "CZ": 567, "LV": 562, "CH": 550, "SI": 619, "IS": 590,
+    "ES": 538, "IT": 528, "FR": 524, "CY": 537, "MT": 620, "IE": 700,
 }
 
 # ---------------------------------------------------------------------------

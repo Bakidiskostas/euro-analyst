@@ -14,7 +14,7 @@
 
 Deciding which European country to move to shouldn't come down to gut feeling and a few forum threads. This dashboard puts 30 countries side by side on the things that actually decide whether a move works out — what you'd earn, what it costs to live there, how many data jobs exist, how good the healthcare is — and turns all of it into one comparable score per country.
 
-The methodology is honest about its limits, and every number traces back to an official source.
+Built for my own job search as a data analyst. The methodology is honest about its limits, and every number traces back to an official source.
 
 ---
 
