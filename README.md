@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner.png" alt="Euro Analyst Compass — comparing 30 European countries for data analysts" width="100%">
+  <img src="assets/banner.svg" alt="Euro Analyst Compass — comparing 30 European countries for data analysts" width="100%">
 </p>
 
 <p align="center">
